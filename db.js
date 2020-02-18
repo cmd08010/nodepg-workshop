@@ -65,7 +65,6 @@ const deleteArticle = async id => {
 const createArticle = async (first, last, title, body) => {
   const SQL = `INSERT INTO articles(author_id, title, body) values ( (SELECT id FROM authors WHERE (first_name = $3 AND last_name = $4)), $1, $2) returning *`
 
-  //   ((SELECT author_id FROM authors WHERE (first_name = ${firstName} AND last_name = ${lastName})
   const response = await client.query(SQL, [title, body, first, last])
   return response.rows[0]
 }
@@ -103,8 +102,8 @@ const createAuthor = async (firstName, lastName) => {
 }
 
 const updateAuthor = async (firstName, lastName) => {
-  const SQL = `INSERT INTO authors(id, first_name, last_name) values ($1, $2, $3) returning *`
-  const response = await client.query(SQL, [uuidv4(), firstName, lastName])
+  const SQL = `INSERT INTO authors( first_name, last_name) values ($1, $2) returning *`
+  const response = await client.query(SQL, [firstName, lastName])
 
   return response.rows[0]
 }
