@@ -6,11 +6,13 @@ const client = new Client("postgres://localhost/author_nodepg_workshop")
 client.connect()
 
 const sync = async () => {
-  const SQL = `DROP TABLE IF EXISTS authors;
+  const SQL = `
+  CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
   DROP TABLE IF EXISTS articles;
+  DROP TABLE IF EXISTS authors;
   CREATE TABLE authors
   (
-    id VARCHAR PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     first_name VARCHAR,
     last_name VARCHAR,
     date_created VARCHAR
@@ -18,12 +20,18 @@ const sync = async () => {
 
   CREATE TABLE articles
   (
-    id VARCHAR PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR,
     body VARCHAR,
     date_created VARCHAR,
-    author_id VARCHAR
+    author_id UUID REFERENCES authors(id)
   );
+  INSERT INTO authors (
+    id, first_name, last_name
+  ) VALUES (
+    '${uuidv4()}', 'lucy', 'goosey'
+   );
+
   `
 
   await client.query(SQL)
@@ -31,9 +39,7 @@ const sync = async () => {
   const firstArticle = articles.find(article => article.title === "Article One")
   console.log(firstArticle)
   // firstArticle.title = "The first Article"
-  const author = await createAuthor("Dr. Author")
-
-  await createAuthor("Dr Author", firstArticle)
+  const author = await createAuthor("Dr. Author", "butts")
 }
 
 ////ARTICLES////
@@ -56,9 +62,11 @@ const deleteArticle = async id => {
   await client.query(SQL, [id])
 }
 
-const createArticle = async title => {
-  const SQL = `INSERT INTO articles(id, title) values ($1, $2) returning *`
-  const response = await client.query(SQL, [uuidv4(), title])
+const createArticle = async (first, last, title, body) => {
+  const SQL = `INSERT INTO articles(author_id, title, body) values ( (SELECT id FROM authors WHERE (first_name = $3 AND last_name = $4)), $1, $2) returning *`
+
+  //   ((SELECT author_id FROM authors WHERE (first_name = ${firstName} AND last_name = ${lastName})
+  const response = await client.query(SQL, [title, body, first, last])
   return response.rows[0]
 }
 
@@ -74,6 +82,7 @@ const readAuthors = async () => {
   const response = await client.query(SQL)
   return response.rows
 }
+
 const readAuthor = async id => {
   const SQL = `SELECT * FROM authors WHERE id=$1`
   const response = await client.query(SQL, [id])
@@ -87,8 +96,8 @@ const deleteAuthor = async id => {
 }
 
 const createAuthor = async (firstName, lastName) => {
-  const SQL = `INSERT INTO authors(id, first_name, last_name) values ($1, $2, $3) returning *`
-  const response = await client.query(SQL, [uuidv4(), firstName, lastName])
+  const SQL = `INSERT INTO authors( first_name, last_name) values ($1, $2) returning *`
+  const response = await client.query(SQL, [firstName, lastName])
 
   return response.rows[0]
 }
@@ -110,5 +119,8 @@ module.exports = {
   readAuthors,
   deleteArticle,
   updateArticle,
-  createArticle
+  createArticle,
+  createAuthor,
+  updateAuthor,
+  deleteAuthor
 }

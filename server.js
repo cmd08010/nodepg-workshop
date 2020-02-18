@@ -10,6 +10,8 @@ const { Pool, Client } = require("pg")
 db.sync().then(async () => {
   console.log("synched")
   await db.readArticles()
+  await db.createAuthor("friend", "author")
+  await db.createArticle("friend", "author", "articleOne", "body stuff")
 })
 
 const port = process.env.PORT || 3000
